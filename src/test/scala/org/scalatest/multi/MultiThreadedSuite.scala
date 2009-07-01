@@ -1,12 +1,6 @@
 package org.scalatest.multi
 
-import java.io.{StringWriter, PrintWriter}
-import java.util.concurrent.locks.ReentrantReadWriteLock
-import java.util.concurrent.{ArrayBlockingQueue, Semaphore, CountDownLatch, TimeUnit}
-
 /**
- *
- * 
  * Date: Jun 16, 2009
  * Time: 7:25:34 PM
  * @author Josh Cough

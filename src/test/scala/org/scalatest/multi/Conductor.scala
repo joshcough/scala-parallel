@@ -1,15 +1,8 @@
 package org.scalatest.multi
 
 import java.util.concurrent._
-import scala.actors.Actor
-import java.io.{StringWriter, PrintWriter}
-import java.util.Random
-import java.util.concurrent.locks.{Condition, ReentrantReadWriteLock}
-import scala.collection.mutable.Map
-
 import Thread.State._
 import scala.util.concurrent.PimpedThreadGroup._
-
 import scala.collection.jcl.Conversions.convertList
 
 
@@ -206,7 +199,7 @@ trait Conductor extends PrintlnLogger {
    *             (a number between 0 and 1) the likelihood that Thread.yield() is called
    */
   def possiblyYield(probability: Double) {
-    if (new Random().nextDouble() < probability) Thread.`yield`
+    if (new java.util.Random().nextDouble() < probability) Thread.`yield`
   }
 
   //////////////////////////////// run methods start ////////////////////////////////////////
@@ -332,6 +325,7 @@ trait Conductor extends PrintlnLogger {
    */
   class Clock { // TODO: figure out why the compiler won't let us make this private
 
+    import java.util.concurrent.locks.ReentrantReadWriteLock    
     import scala.util.concurrent.locks.PimpedReadWriteLock._
 
     // clock starts at time 0
