@@ -64,7 +64,6 @@ class PimpedReadWriteLock(lock: ReadWriteLock) {
 
   /**
    * Alternate name for withWriteLock
-   * Returns the result
    */
   def write[T](f: => T): T = withLock(lock.writeLock){ f }
 
