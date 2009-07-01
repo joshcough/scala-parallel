@@ -30,13 +30,13 @@ class PimpedReadWriteLockMultiThreadedTest extends MultiThreadedSuite with MustM
   // uncomment me for some debugging!
   //logLevel = debug
 
-  thread{
+  thread("reader gets lock first"){
     lock.read{
       logger.debug.around("using read lock"){ waitForTick(2) }
     }
   }
 
-  thread{
+  thread("writer must wait for reader to give up lock"){
     waitForTick(1)
     lock.write{
       logger.debug.around("using write lock"){ tick mustBe 2 }

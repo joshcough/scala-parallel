@@ -15,13 +15,11 @@ object PimpedReadWriteLock{
   implicit def pimpMyReadWriteLock( lock: ReadWriteLock ) = new PimpedReadWriteLock(lock)
 
   /**
-   * Locks the given lock
-   * Executes the given function, holding the result
-   * Unlocks the lock
-   * Returns the result
+   * Executes the given function while holding the given lock
    *
    * @param lock the lock to be locked while executing the given function
    * @param f the function to be executed while the lock is locked
+   * @return the result yielded by executing the given function
    */
   def withLock[T](lock: Lock)(f: => T): T = {
     lock.lock
@@ -32,18 +30,18 @@ object PimpedReadWriteLock{
 }
 
 /**
- * Adds withReadLock and withWriteLock functions to ReadWriteLock.
+ * Pimps a ReadWriteLock by adding these instance methods: 
+ * withReadLock, withWriteLock, read and write.
  */
 class PimpedReadWriteLock(lock: ReadWriteLock) {
 
-  import PimpedReadWriteLock._
+  import PimpedReadWriteLock.withLock
 
   /**
-   * Locks the read lock
-   * Executes the given function, holding the result
-   * Unlocks the read lock
-   * 
+   * Executes the given function, with the read lock locked
+   *
    * @param f the function to be executed while the read lock is locked
+   * @return the result yielded by the given function
    */
   def withReadLock[T](f: => T): T = withLock(lock.readLock){ f }
 
@@ -53,12 +51,10 @@ class PimpedReadWriteLock(lock: ReadWriteLock) {
   def read[T](f: => T): T = withLock(lock.readLock){ f }
 
   /**
-   * Locks the write lock
-   * Executes the given function, holding the result
-   * Unlocks the write lock
-   * Returns the result
-   *
-   * @param f the function to be executed while the read lock is locked
+   * Executes the given function, with the write lock locked
+   * 
+   * @param f the function to be executed while the write lock is locked
+   * @return the result yielded by the given function
    */
   def withWriteLock[T](f: => T): T = withLock(lock.writeLock){ f }
 
@@ -66,5 +62,4 @@ class PimpedReadWriteLock(lock: ReadWriteLock) {
    * Alternate name for withWriteLock
    */
   def write[T](f: => T): T = withLock(lock.writeLock){ f }
-
 }
