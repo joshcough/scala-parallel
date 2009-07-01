@@ -14,6 +14,15 @@ object PimpedReadWriteLock{
   
   implicit def pimpMyReadWriteLock( lock: ReadWriteLock ) = new PimpedReadWriteLock(lock)
 
+  /**
+   * Locks the given lock
+   * Executes the given function, holding the result
+   * Unlocks the lock
+   * Returns the result
+   *
+   * @param lock the lock to be locked while executing the given function
+   * @param f the function to be executed while the lock is locked
+   */
   def withLock[T](lock: Lock)(f: => T): T = {
     lock.lock
     val t = f
@@ -29,15 +38,32 @@ class PimpedReadWriteLock(lock: ReadWriteLock) {
 
   /**
    * Locks the read lock
-   * Executes the given function
+   * Executes the given function, holding the result
    * Unlocks the read lock
+   * 
+   * @param f the function to be executed while the read lock is locked
    */
   def withReadLock[T](f: => T): T = PimpedReadWriteLock.withLock(lock.readLock){ f }
 
   /**
+   * Alternate name for withReadLock
+   */
+  def read[T](f: => T): T = PimpedReadWriteLock.withLock(lock.readLock){ f }
+
+  /**
    * Locks the write lock
-   * Executes the given function
+   * Executes the given function, holding the result
    * Unlocks the write lock
+   * Returns the result
+   *
+   * @param f the function to be executed while the read lock is locked
    */
   def withWriteLock[T](f: => T): T = PimpedReadWriteLock.withLock(lock.writeLock){ f }
+
+  /**
+   * Alternate name for withWriteLock
+   * Returns the result
+   */
+  def write[T](f: => T): T = PimpedReadWriteLock.withLock(lock.writeLock){ f }
+
 }
