@@ -1,4 +1,4 @@
-package org.scalatest.multi 
+package scala.util.concurrent
 
 import Thread.State
 import Thread.State._

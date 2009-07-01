@@ -8,7 +8,7 @@ import java.util.concurrent.locks.{Condition, ReentrantReadWriteLock}
 import scala.collection.mutable.Map
 
 import Thread.State._
-import PimpedThreadGroup._
+import scala.util.concurrent.PimpedThreadGroup._
 
 import scala.collection.jcl.Conversions.convertList
 
@@ -55,7 +55,7 @@ object Conductor {
  */
 trait Conductor extends PrintlnLogger {
 
-  import Conductor._
+  import Conductor.{getClockPeriod, getRunLimit}
 
   logLevel = nothing
 

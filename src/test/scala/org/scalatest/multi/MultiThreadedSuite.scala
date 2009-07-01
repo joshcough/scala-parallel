@@ -3,7 +3,6 @@ package org.scalatest.multi
 import java.io.{StringWriter, PrintWriter}
 import java.util.concurrent.locks.ReentrantReadWriteLock
 import java.util.concurrent.{ArrayBlockingQueue, Semaphore, CountDownLatch, TimeUnit}
-import Conductor._
 
 /**
  *
