@@ -36,6 +36,8 @@ object PimpedReadWriteLock{
  */
 class PimpedReadWriteLock(lock: ReadWriteLock) {
 
+  import PimpedReadWriteLock._
+
   /**
    * Locks the read lock
    * Executes the given function, holding the result
@@ -43,12 +45,12 @@ class PimpedReadWriteLock(lock: ReadWriteLock) {
    * 
    * @param f the function to be executed while the read lock is locked
    */
-  def withReadLock[T](f: => T): T = PimpedReadWriteLock.withLock(lock.readLock){ f }
+  def withReadLock[T](f: => T): T = withLock(lock.readLock){ f }
 
   /**
    * Alternate name for withReadLock
    */
-  def read[T](f: => T): T = PimpedReadWriteLock.withLock(lock.readLock){ f }
+  def read[T](f: => T): T = withLock(lock.readLock){ f }
 
   /**
    * Locks the write lock
@@ -58,12 +60,12 @@ class PimpedReadWriteLock(lock: ReadWriteLock) {
    *
    * @param f the function to be executed while the read lock is locked
    */
-  def withWriteLock[T](f: => T): T = PimpedReadWriteLock.withLock(lock.writeLock){ f }
+  def withWriteLock[T](f: => T): T = withLock(lock.writeLock){ f }
 
   /**
    * Alternate name for withWriteLock
    * Returns the result
    */
-  def write[T](f: => T): T = PimpedReadWriteLock.withLock(lock.writeLock){ f }
+  def write[T](f: => T): T = withLock(lock.writeLock){ f }
 
 }
