@@ -326,7 +326,7 @@ trait Conductor extends PrintlnLogger {
   class Clock { // TODO: figure out why the compiler won't let us make this private
 
     import java.util.concurrent.locks.ReentrantReadWriteLock    
-    import scala.util.concurrent.locks.PimpedReadWriteLock._
+    import scala.util.concurrent.locks.Implicits._
 
     // clock starts at time 0
     private var currentTime = 0
@@ -356,7 +356,7 @@ trait Conductor extends PrintlnLogger {
     // TODO: rename time() to tick or currentTick, and tick to incrementTick? Maybe not. Maybe OK.
     def tick() {
       lock.synchronized {
-        rwLock.withWriteLock{
+        rwLock.write {
           logger.trace("tick! from: " + currentTime + " to: " + (currentTime + 1))
           currentTime += 1
         }
@@ -367,7 +367,7 @@ trait Conductor extends PrintlnLogger {
     /**
      * The current time.
      */  // TODO: Maybe currentTime is a better name for the method, but...
-    def time: Tick = rwLock withReadLock currentTime
+    def time: Tick = rwLock read currentTime
 
     /**
      * When wait for tick is called, the current thread will block until
@@ -407,7 +407,7 @@ trait Conductor extends PrintlnLogger {
      * but prevent the clock from advancing due to a  { @link # waitForTick ( int ) } in
      * another thread.
      */
-    def withClockFrozen[T](f: => T): T = rwLock withReadLock f
+    def withClockFrozen[T](f: => T): T = rwLock read f
 
     /**
      * Check if the clock has been frozen by any threads.
