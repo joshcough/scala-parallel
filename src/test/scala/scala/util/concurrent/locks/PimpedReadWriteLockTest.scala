@@ -25,7 +25,7 @@ class PimpedReadWriteLockTest extends ConcurrentTest {
   val lock = new java.util.concurrent.locks.ReentrantReadWriteLock
   import Implicits.RichReentrantReadWriteLock
 
-  logLevel = everything
+  //logLevel = everything
 
   5.threads("reader thread("+_+")") {
     lock.read {
