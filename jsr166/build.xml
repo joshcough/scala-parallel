@@ -1,0 +1,791 @@
+<project name="jsr166" default="usage">
+
+  <description>
+------------------------------------------------------------------------------
+  Build file for JSR-166
+
+  Usage: ant [target]
+
+  User-specific settings are read from user.properties.
+  See user.properties.sample for an explanation of some useful settings.
+------------------------------------------------------------------------------
+  </description>
+
+  <target name="usage" description="Advises user to run with -projecthelp">
+    <echo>Run "ant -projecthelp" for full usage information.</echo>
+  </target>
+
+
+  <!-- User-specific settings -->
+  <property file="user.properties"/>
+
+
+  <!-- Compilation options -->
+  <property name="build.sourcelevel"    value="1.5"/>
+  <property name="build.debug"          value="true"/>
+  <property name="build.debuglevel"     value="source,lines,vars"/>
+  <property name="build.deprecation"    value="false"/>
+
+  <!-- Build locations -->
+  <property name="build.dir"            location="build"/>
+  <property name="build.classes.dir"    location="${build.dir}/classes"/>
+  <property name="build.testcases.dir"  location="${build.dir}/testcases"/>
+  <property name="build.loops.dir"      location="${build.dir}/loops"/>
+  <property name="build.lib.dir"        location="${build.dir}/lib"/>
+  <property name="build.javadocs.dir"   location="${build.dir}/javadocs"/>
+  <property name="build.reports.dir"    location="${build.dir}/reports"/>
+  <property name="build.jsr166x.dir"    location="${build.dir}/jsr166x"/>
+  <property name="build.jsr166xlib.dir"        location="${build.dir}/jsr166xlib"/>
+  <property name="build.jsr166xjavadocs.dir"   location="${build.dir}/jsr166xjavadocs"/>
+
+  <property name="build.jsr166y.dir"    location="${build.dir}/jsr166y"/>
+  <property name="build.jsr166ylib.dir"        location="${build.dir}/jsr166ylib"/>
+  <property name="build.jsr166yjavadocs.dir"   location="${build.dir}/jsr166yjavadocs"/>
+
+  <property name="build.extra166y.dir"    location="${build.dir}/extra166y"/>
+  <property name="build.extra166ylib.dir"        location="${build.dir}/extra166ylib"/>
+  <property name="build.extra166yjavadocs.dir"   location="${build.dir}/extra166yjavadocs"/>
+
+  <!-- Source locations -->
+  <property name="src.dir"              location="${basedir}/src/main"/>
+  <property name="test.src.dir"         location="${basedir}/src/test"/>
+  <property name="loops.src.dir"        location="${basedir}/src/loops"/>
+  <property name="tck.src.dir"          location="${test.src.dir}/tck"/>
+  <property name="jtreg.src.dir"        location="${test.src.dir}/jtreg"/>
+  <property name="lib.dir"              location="${basedir}/lib"/>
+  <property name="dist.dir"             location="${basedir}/dist"/>
+  <property name="topsrc.dir"           location="${basedir}/src"/>
+  <property name="jsr166xsrc.dir"       location="${basedir}/src/jsr166x"/>
+  <property name="jsr166ysrc.dir"       location="${basedir}/src/jsr166y"/>
+  <property name="extra166ysrc.dir"       location="${basedir}/src/extra166y"/>
+
+  <!-- Distribution locations -->
+  <property name="dist.javadocs.dir"    location="${dist.dir}/docs"/>
+  <property name="dist.jsr166xjavadocs.dir"    location="${dist.dir}/jsr166xdocs"/>
+  <property name="dist.jsr166yjavadocs.dir"    location="${dist.dir}/jsr166ydocs"/>
+  <property name="dist.extra166yjavadocs.dir"    location="${dist.dir}/extra166ydocs"/>
+
+  <!-- Jar locations -->
+  <property name="product.jar"          location="${build.lib.dir}/jsr166.jar"/>
+  <property name="jsr166xproduct.jar"   location="${build.jsr166xlib.dir}/jsr166x.jar"/>
+  <property name="jsr166yproduct.jar"   location="${build.jsr166ylib.dir}/jsr166y.jar"/>
+  <property name="extra166yproduct.jar"   location="${build.extra166ylib.dir}/extra166y.jar"/>
+  <property name="junit.jar"            location="${lib.dir}/junit.jar"/>
+
+  <!-- Bootclasspath argument -->
+  <property name="bootclasspath.args"   value="-Xbootclasspath/p:${product.jar}"/>
+
+  <!-- Test classpath -->
+  <path id="test.classpath">
+    <pathelement location="${build.testcases.dir}"/>
+    <pathelement location="${junit.jar}"/>
+  </path>
+
+  <!-- ALoops classpath -->
+  <path id="loops.classpath">
+    <pathelement location="${build.loops.dir}"/>
+  </path>
+
+
+  <!-- Main targets -->
+
+
+  <target name="compile"
+          depends="init, configure-compiler"
+          description="Compiles main sources to build folder">
+
+    <mkdir dir="${build.classes.dir}"/>
+
+    <javac srcdir="${src.dir}"
+          destdir="${build.classes.dir}"
+            debug="${build.debug}"
+       debuglevel="${build.debuglevel}"
+      deprecation="${build.deprecation}"
+           source="${build.sourcelevel}"
+             fork="true">
+
+      <include name="**/*.java"/>
+      <compilerarg value="-XDignore.symbol.file"/>
+
+<!--
+      <exclude name="java/lang/**"/>
+      <compilerarg line="${build.args}"/>
+      <compilerarg line="-Xlint -Xmaxwarns 1000"/>
+-->
+
+    </javac>
+
+  </target>
+
+
+
+  <target name="jar"
+          depends="compile"
+          description="Builds library jar from compiled sources">
+
+    <mkdir dir="${build.lib.dir}"/>
+
+    <jar destfile="${product.jar}">
+      <fileset dir="${build.classes.dir}"/>
+    </jar>
+
+  </target>
+
+
+
+  <target name="test"
+          depends="init, configure-tests, report-tests"
+          description="Runs all tests (requires JUnit 3.8.1 in ${ant.home}/lib)" />
+
+
+
+  <target name="docs"
+          description="Builds javadocs with custom tags to build folder">
+
+    <delete dir="${build.javadocs.dir}"/>
+    <mkdir dir="${build.javadocs.dir}"/>
+
+    <javadoc destdir="${build.javadocs.dir}"
+                link="http://java.sun.com/javase/6/docs/api/"
+            overview="${src.dir}/intro.html"
+            sourcepath="${src.dir}:/home/dl/1.6.0/j2se/martin/j2se/src/share/classes"
+    >           
+
+      <packageset dir="${src.dir}"/>
+
+    </javadoc>
+
+  </target>
+
+
+
+  <target name="dist"
+          depends="init, dist-clean, dist-jar, dist-docs"
+          description="Puts all distributable products in single hierarchy"/>
+
+
+
+  <target name="release"
+          depends="dist"
+          description="Puts entire CVS tree, plus distribution productions, in a jar">
+
+    <property name="release.jar" value="dist/jsr166-${version}-dist.jar"/>
+
+    <jar basedir="${basedir}" destfile="${release.jar}">
+      <!-- <exclude name="build/**"/> -->
+      <exclude name="${release.jar}"/>
+      <exclude name="user.properties"/>
+      <exclude name="etc/notes/**"/>
+      <exclude name="src/emulation/**"/>
+      <exclude name="**/SyntaxTest.java"/>
+      <exclude name="**/SuperfluousAbstract.java"/>
+    </jar>
+
+  </target>
+
+
+
+  <target name="clean"
+          description="Removes all build products">
+
+    <delete dir="${build.dir}"/>
+    <delete dir="${build.classes.dir}"/>
+    <delete dir="${build.lib.dir}"/>
+
+  </target>
+
+
+
+  <target name="dist-clean"
+          description="Removes all build and distribution products">
+
+    <delete dir="${dist.dir}"/>
+
+  </target>
+
+
+
+  <target name="dist-docs"
+          description="Builds javadocs without custom tags to dist folder">
+
+    <delete dir="${dist.javadocs.dir}"/>
+    <mkdir dir="${dist.javadocs.dir}"/>
+
+    <javadoc destdir="${dist.javadocs.dir}"
+            link="http://java.sun.com/javase/6/docs/api/"
+            overview="${src.dir}/intro.html"
+
+            sourcepath="${src.dir}:/home/dl/1.6.0/j2se/martin/j2se/src/share/classes"
+     >
+<!--
+      <packageset dir="${src.dir}" defaultexcludes="yes">
+      <include name="java/util/concurrent"/>
+      <include name="java/util/concurrent/atomic"/>
+      <include name="java/util/concurrent/locks"/>
+      </packageset>
+-->
+      <fileset dir="${topsrc.dir}" defaultexcludes="yes">
+      <include name="main/java/util/concurrent/*.java"/>
+      <include name="main/java/util/concurrent/atomic/*.java"/>
+      <include name="main/java/util/concurrent/locks/*.java"/>
+      <include name="main/java/util/*.java"/>
+<!--
+      <include name="main/java/util/concurrent/*.html"/>
+      <include name="main/java/util/concurrent/atomic/*.html"/>
+      <include name="main/java/util/concurrent/locks/*.html"/>
+      <include name="main/java/util/*.html"/>
+-->
+<!--      <include name="jsr166x/*.java"/> -->
+      </fileset>
+    </javadoc>
+
+  </target>
+
+
+
+  <!-- Internal targets -->
+
+
+  <target name="init">
+
+    <!-- Version is kept in a separate file -->
+    <loadfile property="version" srcFile="version.properties"/>
+    <echo>Building JSR-166 version ${version}</echo>
+    <echo>java.home is ${java.home}</echo>
+
+  </target>
+
+
+  <target name="dist-jar"
+          depends="clean, jar">
+
+    <copy file="${product.jar}" todir="${dist.dir}"/>
+
+  </target>
+
+
+  <target name="compile-tests"
+          depends="jar">
+
+    <mkdir dir="${build.testcases.dir}"/>
+
+    <javac srcdir="${tck.src.dir}"
+          destdir="${build.testcases.dir}"
+            debug="${build.debug}"
+       debuglevel="${build.debuglevel}"
+      deprecation="${build.deprecation}"
+           source="${build.sourcelevel}"
+             fork="true">
+
+      <compilerarg value="${bootclasspath.args}"/>
+      <compilerarg line="${build.args}"/>
+
+      <classpath refid="test.classpath"/>
+
+    </javac>
+
+    <javac srcdir="${test.src.dir}"
+          destdir="${build.testcases.dir}"
+            debug="${build.debug}"
+       debuglevel="${build.debuglevel}"
+      deprecation="${build.deprecation}"
+           source="${build.sourcelevel}"
+             fork="true">
+
+      <include name="jsr166/test/**"/>
+
+      <compilerarg value="${bootclasspath.args}"/>
+      <compilerarg line="${build.args}"/>
+
+      <classpath refid="test.classpath"/>
+
+    </javac>
+
+<!--
+    <javac srcdir="${jtreg.src.dir}"
+          destdir="${build.testcases.dir}"
+            debug="${build.debug}"
+       debuglevel="${build.debuglevel}"
+      deprecation="${build.deprecation}"
+           source="${build.sourcelevel}"
+             fork="true">
+
+      <compilerarg value="${bootclasspath.args}"/>
+      <compilerarg line="${build.args}"/>
+
+      <classpath refid="test.classpath"/>
+
+    </javac>
+-->
+
+  </target>
+
+
+  <target name="run-tests"
+          depends="compile-tests">
+
+    <!-- May be overridden by user.properties -->
+    <property name="testcase" value="*"/>
+
+    <mkdir dir="${build.reports.dir}"/>
+
+    <junit printsummary="true"
+             showoutput="true"
+          errorProperty="junit.failed"
+        failureProperty="junit.failed"
+                    dir="${build.reports.dir}"
+                   fork="true">
+
+      <jvmarg value="${bootclasspath.args}"/>
+      <jvmarg value="-server"/>
+      <jvmarg value="-showversion"/>
+
+      <classpath refid="test.classpath"/>
+
+      <formatter type="xml"/>
+
+      <batchtest todir="${build.reports.dir}" unless="no.test.tck">
+        <fileset dir="${tck.src.dir}">
+          <include name="**/${testcase}Test.java"/>
+        </fileset>
+      </batchtest>
+
+      <batchtest todir="${build.reports.dir}" if="do.test.old">
+        <fileset dir="${test.src.dir}">
+          <include name="jsr166/test/**/${testcase}Test.java"/>
+        </fileset>
+      </batchtest>
+
+<!--
+      <batchtest todir="${build.reports.dir}" if="do.test.jtreg">
+        <fileset dir="${jtreg.src.dir}">
+          <include name="**/${testcase}Test.java"/>
+        </fileset>
+      </batchtest>
+-->
+
+    </junit>
+
+  </target>
+
+
+  <target name="report-tests"
+          depends="run-tests">
+
+    <!-- Sets junit.report.format to frames if redirection is present,
+         otherwise sets it to noframes. -->
+    <available property="junit.report.format"
+                  value="frames"
+              classname="org.apache.xalan.lib.Redirect"
+    />
+    <property name="junit.report.format" value="noframes"/>
+
+    <junitreport todir="${build.reports.dir}">
+      <fileset dir="${build.reports.dir}">
+        <include name="TEST-*.xml"/>
+      </fileset>
+      <report format="${junit.report.format}" todir="${build.reports.dir}"
+      />
+    </junitreport>
+
+    <fail message="Test Cases Failed" if="junit.failed"/>
+
+  </target>
+
+
+  <target name="configure-compiler">
+
+    <property name="unchecked.option" value="-Xlint:unchecked"/>
+
+    <condition property="warnunchecked.arg" value="${unchecked.option}">
+      <istrue value="${build.warnunchecked}"/>
+    </condition>
+
+    <property name="warnunchecked.arg" value=""/>
+
+
+    <!-- Common options in javac invocations -->
+    <property name="build.args" value="${warnunchecked.arg}"/>
+
+  </target>
+
+
+  <target name="configure-tests"
+       depends="configure-compiler">
+
+    <!-- junit.framework.Protectable is in JUnit 3.8.1 but not in 3.7 -->
+    <available property="junit.available"
+               classname="junit.framework.Protectable"/>
+
+    <!-- Xalan -->
+    <available property="xalan.available"
+               classname="org.apache.xalan.Version"/>
+
+
+    <!-- Ant 1.6beta and later don't need or want this check -->
+    <!--
+    <fail message="Need JUnit 3.8.1 in ${ant.home}${file.separator}lib to run tests"
+          unless="junit.available"/>
+
+    <fail message="Need Xalan 2.5.1 jar in ${ant.home}${file.separator}lib to run tests"
+          unless="xalan.available"/>
+    -->
+
+  </target>
+
+
+  <!-- Various demos and test programs -->
+
+
+  <target name="loops" depends="init, configure-compiler"
+          description="Benchmark from Doug Lea's AQS paper">
+
+    <mkdir dir="${build.loops.dir}"/>
+
+    <javac srcdir="${loops.src.dir}"
+          destdir="${build.loops.dir}"
+            debug="${build.debug}"
+       debuglevel="${build.debuglevel}"
+      deprecation="${build.deprecation}"
+           source="${build.sourcelevel}"
+             fork="true">
+
+      <compilerarg line="${build.args}"/>
+      <classpath refid="loops.classpath"/>
+
+    </javac>
+
+    <java classname="ALoops" fork="true">
+      <classpath refid="loops.classpath"/>
+    </java>
+
+  </target>
+
+
+  <!-- jsr166x -->
+
+
+  <target name="jsr166xcompile"
+          depends="init, configure-compiler"
+          description="Compiles jsr166x sources">
+
+    <mkdir dir="${build.jsr166x.dir}"/>
+
+    <javac srcdir="${jsr166xsrc.dir}"
+          destdir="${build.jsr166x.dir}"
+            debug="${build.debug}"
+       debuglevel="${build.debuglevel}"
+      deprecation="${build.deprecation}"
+           source="${build.sourcelevel}"
+             fork="true">
+
+      <include name="**/*.java"/>
+      <compilerarg line="${build.args}"/>
+
+    </javac>
+
+  </target>
+
+
+
+  <target name="jsr166xjar"
+          depends="jsr166xcompile"
+          description="Builds library jar from compiled sources">
+
+    <mkdir dir="${build.jsr166xlib.dir}"/>
+
+    <jar destfile="${jsr166xproduct.jar}">
+      <fileset dir="${build.jsr166x.dir}"/>
+    </jar>
+
+  </target>
+
+
+
+  <target name="jsr166xdocs"
+          description="Builds javadocs with custom tags to build folder">
+
+    <delete dir="${build.jsr166xjavadocs.dir}"/>
+    <mkdir dir="${build.jsr166xjavadocs.dir}"/>
+
+    <javadoc destdir="${build.jsr166xjavadocs.dir}"
+             link="http://java.sun.com/javase/6/docs/api/"
+
+            sourcepath="${jsr166xsrc.dir}:/home/dl/1.5.0/j2se/martin/j2se/src/share/classes"
+
+    >
+      <packageset dir="${topsrc.dir}" defaultexcludes="yes">
+      <include name="jsr166x"/>
+      </packageset>
+
+
+    </javadoc>
+
+  </target>
+
+
+  <target name="jsr166xdist"
+          depends="jsr166xdist-clean, jsr166xdist-jar, jsr166xdist-docs"
+          description="Puts all distributable products in single hierarchy"/>
+
+
+
+  <target name="jsr166xclean"
+          description="Removes all build products">
+
+    <delete dir="${build.jsr166x.dir}"/>
+    <delete dir="${build.jsr166xlib.dir}"/>
+
+  </target>
+
+
+
+  <target name="jsr166xdist-clean"
+          description="Removes all build and distribution products">
+
+  </target>
+
+
+
+  <target name="jsr166xdist-docs"
+          description="Builds javadocs without custom tags to dist folder">
+
+    <delete dir="${dist.jsr166xjavadocs.dir}"/>
+    <mkdir dir="${dist.jsr166xjavadocs.dir}"/>
+
+    <javadoc destdir="${dist.jsr166xjavadocs.dir}"
+                link="http://java.sun.com/javase/6/docs/api/"
+              source="${build.sourcelevel}">
+
+      <packageset dir="${topsrc.dir}" defaultexcludes="yes">
+      <include name="jsr166x"/>
+      </packageset>
+
+    </javadoc>
+
+  </target>
+
+  <target name="jsr166xdist-jar"
+          depends="jsr166xclean, jsr166xjar">
+
+    <copy file="${jsr166xproduct.jar}" todir="${dist.dir}"/>
+
+  </target>
+
+  <!-- jsr166y -->
+
+
+  <target name="jsr166ycompile"
+          depends="init, configure-compiler"
+          description="Compiles jsr166y sources">
+
+    <mkdir dir="${build.jsr166y.dir}"/>
+
+    <javac srcdir="${jsr166ysrc.dir}"
+          destdir="${build.jsr166y.dir}"
+            debug="${build.debug}"
+       debuglevel="${build.debuglevel}"
+      deprecation="${build.deprecation}"
+           source="${build.sourcelevel}"
+             fork="true">
+
+      <include name="**/*.java"/>
+      <compilerarg line="${build.args}"/>
+      <compilerarg value="${bootclasspath.args}"/>
+
+<!--       <compilerarg line="-Xlint -Xmaxwarns 1000"/> -->
+
+    </javac>
+
+  </target>
+
+
+
+  <target name="jsr166yjar"
+          depends="jsr166ycompile"
+          description="Builds library jar from compiled sources">
+
+    <mkdir dir="${build.jsr166ylib.dir}"/>
+
+    <jar destfile="${jsr166yproduct.jar}" index="true">
+      <fileset dir="${build.jsr166y.dir}"/>
+    </jar>
+
+  </target>
+
+
+
+  <target name="jsr166ydocs"
+          description="Builds javadocs with custom tags to build folder">
+
+    <delete dir="${build.jsr166yjavadocs.dir}"/>
+    <mkdir dir="${build.jsr166yjavadocs.dir}"/>
+
+    <javadoc destdir="${build.jsr166yjavadocs.dir}"
+                link="http://java.sun.com/javase/6/docs/api/"
+            sourcepath="${jsr166ysrc.dir}:/home/dl/1.5.0/j2se/martin/j2se/src/share/classes"
+
+    >
+      <packageset dir="${topsrc.dir}" defaultexcludes="no">
+      <include name="jsr166y"/>
+      </packageset>
+
+
+    </javadoc>
+
+  </target>
+
+
+  <target name="jsr166ydist"
+          depends="jsr166ydist-clean, jsr166ydist-jar, jsr166ydist-docs"
+          description="Puts all distributable products in single hierarchy"/>
+
+
+
+  <target name="jsr166yclean"
+          description="Removes all build products">
+
+    <delete dir="${build.jsr166y.dir}"/>
+    <delete dir="${build.jsr166ylib.dir}"/>
+
+  </target>
+
+
+
+  <target name="jsr166ydist-clean"
+          description="Removes all build and distribution products">
+
+  </target>
+
+  <target name="jsr166ydist-docs"
+          description="Builds javadocs without custom tags to dist folder">
+
+    <delete dir="${dist.jsr166yjavadocs.dir}"/>
+    <mkdir dir="${dist.jsr166yjavadocs.dir}"/>
+
+    <javadoc destdir="${dist.jsr166yjavadocs.dir}"
+                link="http://java.sun.com/javase/6/docs/api/"
+              source="${build.sourcelevel}">
+      <fileset dir="${topsrc.dir}" defaultexcludes="yes">
+      <include name="jsr166y/*.java"/>
+            </fileset>
+    </javadoc>
+
+  </target>
+
+  <target name="jsr166ydist-jar"
+          depends="jsr166yclean, jsr166yjar">
+
+    <copy file="${jsr166yproduct.jar}" todir="${dist.dir}"/>
+
+  </target>
+
+  <!-- extra166y -->
+
+
+  <target name="extra166ycompile"
+          depends="init, configure-compiler"
+          description="Compiles extra166y sources">
+
+    <mkdir dir="${build.extra166y.dir}"/>
+
+    <javac srcdir="${extra166ysrc.dir}"
+          destdir="${build.extra166y.dir}"
+            debug="${build.debug}"
+       debuglevel="${build.debuglevel}"
+      deprecation="${build.deprecation}"
+           source="${build.sourcelevel}"
+             fork="true">
+
+      <include name="**/*.java"/>
+      <compilerarg line="${build.args}"/>
+      <compilerarg value="${bootclasspath.args}"/>
+
+<!--       <compilerarg line="-Xlint -Xmaxwarns 1000"/> -->
+
+    </javac>
+
+  </target>
+
+
+
+  <target name="extra166yjar"
+          depends="extra166ycompile"
+          description="Builds library jar from compiled sources">
+
+    <mkdir dir="${build.extra166ylib.dir}"/>
+
+    <jar destfile="${extra166yproduct.jar}" index="true">
+      <fileset dir="${build.extra166y.dir}"/>
+    </jar>
+
+  </target>
+
+
+
+  <target name="extra166ydocs"
+          description="Builds javadocs with custom tags to build folder">
+
+    <delete dir="${build.extra166yjavadocs.dir}"/>
+    <mkdir dir="${build.extra166yjavadocs.dir}"/>
+
+    <javadoc destdir="${build.extra166yjavadocs.dir}"
+                link="http://java.sun.com/javase/6/docs/api/"
+            sourcepath="${extra166ysrc.dir}:/home/dl/1.5.0/j2se/martin/j2se/src/share/classes"
+
+    >
+      <packageset dir="${topsrc.dir}" defaultexcludes="no">
+      <include name="extra166y"/>
+      </packageset>
+
+
+    </javadoc>
+
+  </target>
+
+
+  <target name="extra166ydist"
+          depends="extra166ydist-clean, extra166ydist-jar, extra166ydist-docs"
+          description="Puts all distributable products in single hierarchy"/>
+
+
+
+  <target name="extra166yclean"
+          description="Removes all build products">
+
+    <delete dir="${build.extra166y.dir}"/>
+    <delete dir="${build.extra166ylib.dir}"/>
+
+  </target>
+
+
+
+  <target name="extra166ydist-clean"
+          description="Removes all build and distribution products">
+
+  </target>
+
+  <target name="extra166ydist-docs"
+          description="Builds javadocs without custom tags to dist folder">
+
+    <delete dir="${dist.extra166yjavadocs.dir}"/>
+    <mkdir dir="${dist.extra166yjavadocs.dir}"/>
+
+    <javadoc destdir="${dist.extra166yjavadocs.dir}"
+                link="http://java.sun.com/javase/6/docs/api/"
+              source="${build.sourcelevel}">
+      <fileset dir="${topsrc.dir}" defaultexcludes="yes">
+      <include name="extra166y/*.java"/>
+            </fileset>
+    </javadoc>
+
+  </target>
+
+  <target name="extra166ydist-jar"
+          depends="extra166yclean, extra166yjar">
+
+    <copy file="${extra166yproduct.jar}" todir="${dist.dir}"/>
+
+  </target>
+
+</project>

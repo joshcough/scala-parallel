@@ -1,0 +1,15 @@
+# ---------------------------------------------------------------------------
+# Developer-specific properties
+#
+# Modify this file to taste and save as user.properties
+#
+# $Id: user.properties.sample,v 1.12 2003/12/08 03:10:54 tim Exp $
+# ---------------------------------------------------------------------------
+
+
+# ----- Turn on -warnunchecked? (default false) -----
+build.warnunchecked = false
+
+
+# ----- Restrict to test cases matching this pattern (omit trailing "Test") -----
+#testcase = PriorityQueue

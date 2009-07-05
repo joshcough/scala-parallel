@@ -25,11 +25,9 @@ trait Logger {
 
     def around[T](a: => Any)(f: => T): T = {
       if (this.level <= logLevel.level) {
-        log("-")
         log("|starting: " + a)
         val t = f
         log("|done with: " + a)
-        log("-")
         t
       }
       else f

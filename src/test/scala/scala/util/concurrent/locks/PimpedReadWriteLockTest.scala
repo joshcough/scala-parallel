@@ -1,8 +1,5 @@
 package scala.util.concurrent.locks
 
-import org.scalatest.FunSuite
-import org.scalatest.matchers.{MustMatchers, MustBeSugar}
-import org.scalatest.multi.MultiThreadedSuite
 import Implicits._
 
 /**
@@ -11,24 +8,20 @@ import Implicits._
  * Date: Jun 30, 2009
  * Time: 8:42:43 AM
  */
-class PimpedReadWriteLockTest extends FunSuite with MustMatchers with MustBeSugar{
+class PimpedReadWriteLockTest extends ConcurrentTest{
 
   val lock = new java.util.concurrent.locks.ReentrantReadWriteLock
 
-  test("use read lock on ReadWriteLock"){  lock.read{ 1 } mustBe 1 }
-  test("use write lock on ReadWriteLock"){ lock.write{ 2 } mustBe 2 }
-}
+  logLevel = debug
 
-class PimpedReadWriteLockMultiThreadedTest extends MultiThreadedSuite with MustMatchers with MustBeSugar{
-
-  val lock = new java.util.concurrent.locks.ReentrantReadWriteLock
-
-  // uncomment me for some debugging!
-  //logLevel = debug
-
-  thread("reader gets lock first"){
-    lock.read{
-      logger.debug.around("using read lock"){ waitForTick(2) }
+  for (i <- 1 to 5) {
+    thread("reader("+i+") gets lock first") {
+      lock.read {
+        // ticks can only happen if all threads are blocked
+        // tick 1 happens because writer is explicitly blocked waiting for tick
+        // for tick 2 to happen, writer thread must be blocked waiting for lock
+        logger.debug.around("using read lock") {waitForTick(2)}
+      }
     }
   }
 
@@ -39,6 +32,7 @@ class PimpedReadWriteLockMultiThreadedTest extends MultiThreadedSuite with MustM
     }
   }
 }
+
 
 
 
