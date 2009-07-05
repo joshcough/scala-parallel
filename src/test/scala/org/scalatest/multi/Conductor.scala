@@ -5,51 +5,10 @@ import Thread.State._
 import scala.util.concurrent.PimpedThreadGroup._
 import scala.collection.jcl.Conversions.convertList
 
-
-/**
- *
- */
-object Conductor {
-  /**
-   * Command line key for indicating the regularity (in milliseconds)
-   * with which the clock thread regulates the thread methods.
-   */
-  val CLOCKPERIOD_KEY = "clockPeriod"
-
-  /**
-   * Command line key for indicating the time limit (in seconds) for
-   * runnable threads.
-   */
-  val RUNLIMIT_KEY = "runLimit"
-
-  /**
-   * The default clock period in milliseconds
-   */
-  val DEFAULT_CLOCKPERIOD = 10
-
-  /**
-   * The default run limit in seconds
-   */
-  val DEFAULT_RUNLIMIT = 5
-
-  /**
-   *
-   */
-  def getClockPeriod = Integer.getInteger(CLOCKPERIOD_KEY, DEFAULT_CLOCKPERIOD).intValue
-
-  /**
-   *
-   */
-  def getRunLimit = Integer.getInteger(RUNLIMIT_KEY, DEFAULT_RUNLIMIT).intValue
-}
-
 /**
  *
  */
 trait Conductor extends PrintlnLogger {
-
-  import Conductor.{getClockPeriod, getRunLimit}
-
   logLevel = nothing
 
   type Tick = Int
@@ -127,8 +86,8 @@ trait Conductor extends PrintlnLogger {
 
   /**
    * An option that might contain a function to run after all threads have finished.
-   * By default, there is no finish function. A user must call finish{...}
-   * in order to have a function executed. If the user does call finish{...}
+   * By default, there is no finish function. A user must call finish  {...}
+   * in order to have a function executed. If the user does call finish  {...}
    * then that function gets saved in this Option, as Some(f)
    */
   // TODO: Ensure this is set and called by the main thread, and if not, it gets an exception
@@ -154,7 +113,7 @@ trait Conductor extends PrintlnLogger {
    *
    * @param c the tick value to wait for
    */
-  def waitForTick(t: Tick) { clock waitForTick t }
+  def waitForTick(t: Tick) {clock waitForTick t}
 
   /**
    * Gets the current value of the thread clock. Primarily useful in
@@ -207,19 +166,25 @@ trait Conductor extends PrintlnLogger {
   /**
    *
    */
-  private val threadStartLatch = new CountDownLatch(1)  
+  private val threadStartLatch = new CountDownLatch(1)
 
   /**
    * Run multithreaded test with the default parameters,
    * or the parameters set at the command line.
    */
-  def start() { start(getClockPeriod, getRunLimit) }
+  def start() {
+    val DEFAULT_CLOCKPERIOD = 10
+    val DEFAULT_RUNLIMIT = 5
+    start(DEFAULT_CLOCKPERIOD, DEFAULT_RUNLIMIT)
+  }
 
   /**
    * Run multithreaded test.
    * @param clockPeriod The period (in ms) between checks for the clock 
    * @param runLimit The limit to run the test in seconds
-   */ // TODO: Only allow this to be called once per instance. 
+   * @throws Throwable The first error or exception that is thrown by one of the threads
+   */
+  // TODO: Only allow this to be called once per instance.
   def start(clockPeriod: Int, runLimit: Int) {
 
     // start each test thread
@@ -232,15 +197,21 @@ trait Conductor extends PrintlnLogger {
     val clockThread = startThread(ClockThread(clockPeriod, runLimit))
 
     // wait until all threads have ended
-    waitForThreads(threads)
-    waitForThreads(clockThread)
+    threads foreach waitForThread
+    waitForThread(clockThread)
+
+    // if there are any errors, get out and dont run the finish function
+    if (!errors.isEmpty) {
+      logger.error("errors: " + errors)      
+      throw errors.peek
+    }
 
     // invoke finish at the end of each run
     runFinishFunction()
   }
 
-  private def startThread(t:Thread): Thread = {
-    logger.trace.around("starting: " + t) { t.start(); t }
+  private def startThread(t: Thread): Thread = {
+    logger.trace.around("starting: " + t) {t.start(); t}
   }
 
   /**
@@ -252,8 +223,6 @@ trait Conductor extends PrintlnLogger {
    *
    * @param threads
    *             List of all the test case threads and the clock thread
-   * @throws Throwable
-   *             The first error or exception that is thrown by one of the threads
    */
   // Explain how we understand it works: if the thread that's been joined already dies with an exception
   // that will go into errors, and this thread the join will return. If the thread returns and doesn't
@@ -262,30 +231,17 @@ trait Conductor extends PrintlnLogger {
   // returns, and after that the error gets into the errors. Because if you look in run() in the
   // thread inside createTestThread, the signalling error happens in a catch Throwable block before the thread
   // returns.
-  private def waitForThreads(threads: List[Thread]) : Unit = {
-    def waitForThread(t: Thread) {
-      logger.trace("waiting for: " + t.getName + " which is in state:" + t.getState)
-      try {
-        if (t.isAlive && !errors.isEmpty) logger.trace.around("stopping: " + t){ t.stop() }
-        else logger.trace.around("joining: " + t){ t.join() }
-      } catch {
-        case e: InterruptedException => {
-          logger.trace("killed waiting for threads. probably deadlock or timeout.")
-          errors offer new AssertionError(e)
-        }
+  def waitForThread(t: Thread) {
+    logger.trace("waiting for: " + t.getName + " which is in state:" + t.getState)
+    try {
+      if (t.isAlive && !errors.isEmpty) logger.trace.around("stopping: " + t) {t.stop()}
+      else logger.trace.around("joining: " + t) {t.join()}
+    } catch {
+      case e: InterruptedException => {
+        logger.trace("killed waiting for threads. probably deadlock or timeout.")
+        errors offer new AssertionError(e)
       }
     }
-
-    threads foreach waitForThread
-
-    logger.trace("errors: " + errors)
-    if (!errors.isEmpty) throw errors.peek
-  }
-
-  def waitForThreads(threads:Thread*): Unit = { waitForThreads(threads.toList) }
-
-  def waitForThreads(threads:java.util.List[Thread]): Unit = {
-    waitForThreads(threads.map( t => t ).toList)
   }
 
   /**
@@ -296,7 +252,7 @@ trait Conductor extends PrintlnLogger {
    * Clock thread will return normally when no threads are running.
    * //
    */
-  def signalError(t:Throwable) {
+  def signalError(t: Throwable) {
     logger.error(t)
     errors offer t
     for (t <- threadGroup.getThreads; if (t != currentThread)) {
@@ -325,7 +281,7 @@ trait Conductor extends PrintlnLogger {
    */
   class Clock { // TODO: figure out why the compiler won't let us make this private
 
-    import java.util.concurrent.locks.ReentrantReadWriteLock    
+    import java.util.concurrent.locks.ReentrantReadWriteLock
     import scala.util.concurrent.locks.Implicits._
 
     // clock starts at time 0
@@ -366,20 +322,22 @@ trait Conductor extends PrintlnLogger {
 
     /**
      * The current time.
-     */  // TODO: Maybe currentTime is a better name for the method, but...
+     */
+    // TODO: Maybe currentTime is a better name for the method, but...
     def time: Tick = rwLock read currentTime
 
     /**
      * When wait for tick is called, the current thread will block until
      * the given tick is reached by the clock.
-     */  // TODO: Could just notify in the tick() method the folks that are waiting on that
+     */
+    // TODO: Could just notify in the tick() method the folks that are waiting on that
     // particular tick, but then that's more complicated. Not a big deal.
     def waitForTick(t: Tick) {
       lock.synchronized {
-        if(t > highestTickCountBeingWaitedOn) highestTickCountBeingWaitedOn = t
+        if (t > highestTickCountBeingWaitedOn) highestTickCountBeingWaitedOn = t
         while (time < t) {
           try {
-            logger.trace.around(currentThread.getName + " is waiting for time " + t){
+            logger.trace.around(currentThread.getName + " is waiting for time " + t) {
               lock.wait()
             }
           } catch {
@@ -398,13 +356,13 @@ trait Conductor extends PrintlnLogger {
      * Returns true if any thread is waiting for a tick in the future ( greater than the current time )
      */
     def anyThreadWaitingForATick_? = {
-      lock.synchronized{ highestTickCountBeingWaitedOn > currentTime }
+      lock.synchronized {highestTickCountBeingWaitedOn > currentTime}
     }
 
     /**
      * When the clock is frozen, it will not advance even when all threads
      * are blocked. Use this to block the current thread with a time limit,
-     * but prevent the clock from advancing due to a  { @link # waitForTick ( int ) } in
+     * but prevent the clock from advancing due to a    { @link # waitForTick ( int ) } in
      * another thread.
      */
     def withClockFrozen[T](f: => T): T = rwLock read f
@@ -458,12 +416,11 @@ trait Conductor extends PrintlnLogger {
    * @param maxRunTime The limit to run the test in seconds
    */
   case class ClockThread(clockPeriod: Int, maxRunTime: Int) extends Thread("Clock") {
-
     this setDaemon true // TODO: Why is this a daemon thread? If no good reason, drop it.
 
     // used in detecting timeouts
     private var lastProgress = System.currentTimeMillis
-    
+
     // used in detecting deadlocks
     private var deadlockCount = 0
     private val MAX_DEADLOCK_DETECTIONS_BEFORE_DEADLOCK = 50
@@ -501,7 +458,7 @@ trait Conductor extends PrintlnLogger {
     private def timeout() {
       val errorMessage = "Timeout! Test ran longer than " + maxRunTime + " seconds."
       signalError(new IllegalStateException(errorMessage))
-      mainThread.interrupt()      
+      mainThread.interrupt()
     }
 
     /**
@@ -509,9 +466,9 @@ trait Conductor extends PrintlnLogger {
      */
     private def detectDeadlock() {
       if (deadlockCount == MAX_DEADLOCK_DETECTIONS_BEFORE_DEADLOCK) {
-        val errorMessage = "Apparent Deadlock! Threads waiting 50 clock periods ("+(clockPeriod*50)+"ms)"
+        val errorMessage = "Apparent Deadlock! Threads waiting 50 clock periods (" + (clockPeriod * 50) + "ms)"
         signalError(new IllegalStateException(errorMessage))
-        mainThread.interrupt()        
+        mainThread.interrupt()
       }
       else deadlockCount += 1
     }
