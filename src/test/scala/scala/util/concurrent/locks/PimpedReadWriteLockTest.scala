@@ -1,34 +1,48 @@
 package scala.util.concurrent.locks
 
-import Implicits._
-
 /**
+ * How this test works:
+ *
+ * 15 reader threads are created, 5 named, 10 anonymous
+ *  1 writer thread is created
+ *
+ * ticks can only happen if ALL threads are blocked
+ *
+ * tick 1 happens because:
+ *   all reader threads are blocked waiting for tick 1
+ *   writer is also explicitly blocked waiting for tick 1
+ *
+ * tick 2 happens because:
+ *   all reader threads are blocked waiting for tick 2
+ *   writer thread must be blocked waiting for lock
  *
  * @author Josh Cough
  * Date: Jun 30, 2009
  * Time: 8:42:43 AM
  */
-class PimpedReadWriteLockTest extends ConcurrentTest{
+class PimpedReadWriteLockTest extends ConcurrentTest {
 
   val lock = new java.util.concurrent.locks.ReentrantReadWriteLock
+  import Implicits.RichReentrantReadWriteLock
 
-  logLevel = debug
+  logLevel = everything
 
-  for (i <- 1 to 5) {
-    thread("reader("+i+") gets lock first") {
-      lock.read {
-        // ticks can only happen if all threads are blocked
-        // tick 1 happens because writer is explicitly blocked waiting for tick
-        // for tick 2 to happen, writer thread must be blocked waiting for lock
-        logger.debug.around("using read lock") {waitForTick(2)}
-      }
+  5.threads("reader thread("+_+")") {
+    lock.read {
+      logger.debug.around("using read lock") {waitForTick(2)}
     }
   }
 
-  thread("writer must wait for reader to give up lock"){
+  10 anonymousThreads {
+    lock.read {
+      logger.debug.around("using read lock") {waitForTick(2)}
+    }
+  }
+
+  thread("writer thread") {
     waitForTick(1)
-    lock.write{
-      logger.debug.around("using write lock"){ tick mustBe 2 }
+    lock.write {
+      logger.debug.around("using write lock") {tick mustBe 2}
     }
   }
 }

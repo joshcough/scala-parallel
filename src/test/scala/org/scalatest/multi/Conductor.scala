@@ -43,7 +43,7 @@ trait Conductor extends PrintlnLogger {
   /**
    *
    */
-  def thread[T](f: => T): Thread = thread("thread" + threads.size) {f}
+  def anonymous_thread[T](f: => T): Thread = thread("thread" + threads.size) {f}
 
   /**
    *
@@ -52,6 +52,17 @@ trait Conductor extends PrintlnLogger {
     val t = createTestThread(desc, f _)
     threads add t
     t
+  }
+
+  implicit def addThreadsMethodToInt(i:Int) = new {
+    def threads[T](name: Int => String)(f: => T): List[Thread] = {
+      val seq = for( count <- 1 to i) yield thread(name(i)) {f}
+      seq.toList
+    }
+    def anonymousThreads[T](f: => T): List[Thread] = {
+      val seq = for( count <- 1 to i) yield anonymous_thread{f}
+      seq.toList
+    }
   }
 
   /**
@@ -473,4 +484,7 @@ trait Conductor extends PrintlnLogger {
       else deadlockCount += 1
     }
   }
+
+
+
 }
