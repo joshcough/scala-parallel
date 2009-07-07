@@ -1,32 +1,23 @@
 package scala.util.concurrent.locks
 
-import java.util.concurrent.locks.{Lock => JLock, Condition => JCondition}
+import java.util.concurrent.locks.{Lock => JLock}
 
 object Lock {
-  def apply(lock: JLock): Lock = {
-    val l = lock
-    new Lock { override val underlying = l }
-  }
+  def apply(lock: JLock): JavaLock = new JavaLock(lock)
 }
 
-trait Lock {
-  trait Condition {
-    val underlying: JCondition = Lock.this.underlying.newCondition
-  }
+trait AbstractLock {
+  def unlock(): Unit
+  def newCondition(condition: => Boolean): Condition
 
-  val underlying: JLock
+  def attemptFor(duration: Duration): TryingLock
+  def attempt: TryingLock
+  def interruptible: Lock
+  def uninterruptible: Lock
+}
 
-  def lock() = underlying.lock
-  def unlock() = underlying.unlock
-  def tryLock() = underlying.tryLock
-
-  lazy val interruptible: Lock = new Lock {
-    override val underlying = Lock.this.underlying
-    override def lock() = underlying.lockInterruptibly
-    override lazy val interruptible = this
-    override val uninterruptible = Lock.this
-  }
-  val uninterruptible: Lock = this
+trait Lock extends AbstractLock {
+  def lock(): Unit
 
   def map[T](f: this.type => T): T = {
     this.lock()
@@ -36,8 +27,26 @@ trait Lock {
       this.unlock()
     }
   }
-
   def flatMap[T](f: this.type => T): T = map(f)
-
+  def foreach(f: this.type => Unit): Unit = map(f)
   def apply[T](f: => T): T = map(_ => f)
+}
+
+trait TryingLock extends AbstractLock {
+  def lock(): Boolean
+
+  def map[T](f: this.type => T): Option[T] = {
+    if (this.lock()) {
+      try {
+        Some(f(this))
+      } finally {
+        this.unlock()
+      }
+    } else {
+      None
+    }
+  }
+  def flatMap[T](f: this.type => T): Option[T] = map(f)
+  def foreach(f: this.type => Unit): Unit = map(f)
+  def apply[T](f: => T): Option[T] = map(_ => f)
 }

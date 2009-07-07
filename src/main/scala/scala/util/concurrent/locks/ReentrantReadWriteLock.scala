@@ -4,13 +4,16 @@ import java.util.concurrent.locks.{ReentrantReadWriteLock => JReentrantReadWrite
 
 object ReentrantReadWriteLock {
   def apply(lock: JReentrantReadWriteLock): ReentrantReadWriteLock =
-    new ReentrantReadWriteLock {
-      override val underlying = lock
-    }
+    new JavaReentrantReadWriteLock(lock)
+  def apply(fair: Boolean /* = false */): ReentrantReadWriteLock =
+    apply(new JReentrantReadWriteLock(fair))
 }
 
-class ReentrantReadWriteLock(fair: Boolean /* = false */) extends ReadWriteLock {
-  def this() = this(false) /* remove for 2.8 */
+trait ReentrantReadWriteLock extends ReadWriteLock {
+  def fair: Boolean
+}
 
-  val underlying: JReentrantReadWriteLock = new JReentrantReadWriteLock(fair)
+class JavaReentrantReadWriteLock(override val underlying: JReentrantReadWriteLock)
+    extends JavaReadWriteLock(underlying) with ReentrantReadWriteLock {
+  override def fair = underlying.isFair
 }
