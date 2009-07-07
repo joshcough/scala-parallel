@@ -1,3 +1,5 @@
 *.iws
 target
 out
+project/boot
+lib_managed/
