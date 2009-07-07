@@ -29,7 +29,7 @@ trait Lock extends AbstractLock {
   }
   def flatMap[T](f: this.type => T): T = map(f)
   def foreach(f: this.type => Unit): Unit = map(f)
-  def apply[T](f: => T): T = map(_ => f)
+  def apply[T](block: => T): T = map(_ => block)
 }
 
 trait TryingLock extends AbstractLock {
@@ -48,5 +48,5 @@ trait TryingLock extends AbstractLock {
   }
   def flatMap[T](f: this.type => T): Option[T] = map(f)
   def foreach(f: this.type => Unit): Unit = map(f)
-  def apply[T](f: => T): Option[T] = map(_ => f)
+  def apply[T](block: => T): Option[T] = map(_ => block)
 }

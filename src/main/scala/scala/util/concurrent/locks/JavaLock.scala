@@ -29,21 +29,25 @@ class AbstractJavaLock(val underlying: JLock) extends AbstractLock {
   }
 }
 
-class JavaLock(override val underlying: JLock) extends AbstractJavaLock(underlying) with Lock {
+class JavaLock(override val underlying: JLock)
+extends AbstractJavaLock(underlying) with Lock {
   override def lock() = underlying.lock
   override lazy val uninterruptible = this
 }
 
-class ThrowingJavaLock(override val underlying: JLock) extends AbstractJavaLock(underlying) with Lock {
+class ThrowingJavaLock(override val underlying: JLock)
+extends AbstractJavaLock(underlying) with Lock {
   override def lock() = underlying.lockInterruptibly
   override lazy val interruptible = this
 }
 
-class TryingJavaLock(override val underlying: JLock) extends AbstractJavaLock(underlying) with TryingLock {
+class TryingJavaLock(override val underlying: JLock)
+extends AbstractJavaLock(underlying) with TryingLock {
   override def lock() = underlying.tryLock
   override lazy val attempt = this
 }
 
-class TimedTryingJavaLock(override val underlying: JLock, duration: Duration) extends AbstractJavaLock(underlying) with TryingLock {
+class TimedTryingJavaLock(override val underlying: JLock, duration: Duration)
+extends AbstractJavaLock(underlying) with TryingLock {
   override def lock() = underlying.tryLock(duration.length, duration.timeUnit)
 }
