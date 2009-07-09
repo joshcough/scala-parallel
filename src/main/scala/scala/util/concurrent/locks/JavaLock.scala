@@ -1,5 +1,6 @@
 package scala.util.concurrent.locks
 
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.{Lock => JLock, Condition => JCondition}
 
 class AbstractJavaLock(val underlying: JLock) extends AbstractLock {
@@ -49,5 +50,5 @@ extends AbstractJavaLock(underlying) with TryingLock {
 
 class TimedTryingJavaLock(override val underlying: JLock, duration: Duration)
 extends AbstractJavaLock(underlying) with TryingLock {
-  override def lock() = underlying.tryLock(duration.length, duration.timeUnit)
+  override def lock() = underlying.tryLock(duration.toJavaNanos, TimeUnit.NANOSECONDS)
 }

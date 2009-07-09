@@ -1,5 +1,6 @@
 package scala.util.concurrent.locks
 
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.{Lock => JLock, Condition => JCondition}
 
 class AbstractJavaCondition(cond: => Boolean, val underlying: JCondition)
@@ -44,5 +45,5 @@ extends AbstractJavaCondition(cond, underlying) with Condition {
 class TryingJavaCondition(duration: Duration, cond: => Boolean,
   override val underlying: JCondition)
 extends AbstractJavaCondition(cond, underlying) with TryingCondition {
-  override def await() = underlying.await(duration.length, duration.timeUnit)
+  override def await() = underlying.await(duration.toJavaNanos, TimeUnit.NANOSECONDS)
 }
