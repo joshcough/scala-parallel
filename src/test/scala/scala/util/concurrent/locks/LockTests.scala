@@ -86,8 +86,7 @@ class MultiLockTest extends FunSuite with MustMatchers with MustBeSugar{
     answer mustBe 42
   }
 
-
-  test("lock two with for?"){
+  test("lock two locks with for"){
     val answer: Int = for( a <- lockA; b <- lockB ) yield 42
     answer mustBe 42
   }
