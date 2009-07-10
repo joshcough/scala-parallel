@@ -59,16 +59,18 @@ class AttemptFunctionShouldntBeEvaluatedOnFailureTest extends LockTest {
 /**
  * Simply demonstrate using the Duration methods on Int
  */
-class UseIntDurationApi extends LockTest{
+class UseIntDurationApi extends FunSuite with MustMatchers with MustBeSugar{
 
-  thread("lock holder"){
-    lock.attemptFor(5.nanos)   { /*nothing*/ } getOrElse { explode }
-    lock.attemptFor(5.micros)  { /*nothing*/ } getOrElse { explode }
-    lock.attemptFor(5.millis)  { /*nothing*/ } getOrElse { explode }
-    lock.attemptFor(5.seconds) { /*nothing*/ } getOrElse { explode }
-    lock.attemptFor(5.minutes) { /*nothing*/ } getOrElse { explode }
-    lock.attemptFor(5.hours)   { /*nothing*/ } getOrElse { explode }
-    lock.attemptFor(5.days)    { /*nothing*/ } getOrElse { explode }
+  test("demo"){
+    val lock = new JReentrantLock
+    
+    lock.attemptFor(5.nanos) { /*nothing*/ } getOrElse {explode}
+    lock.attemptFor(5.micros) { /*nothing*/ } getOrElse {explode}
+    lock.attemptFor(5.millis) { /*nothing*/ } getOrElse {explode}
+    lock.attemptFor(5.seconds) { /*nothing*/ } getOrElse {explode}
+    lock.attemptFor(5.minutes) { /*nothing*/ } getOrElse {explode}
+    lock.attemptFor(5.hours) { /*nothing*/ } getOrElse {explode}
+    lock.attemptFor(5.days) { /*nothing*/ } getOrElse {explode}
   }
 
   def explode = fail("should have gotten lock!")
@@ -80,10 +82,18 @@ class UseIntDurationApi extends LockTest{
  */
 class MultiLockTest extends FunSuite with MustMatchers with MustBeSugar{
 
-  val lockA = new JReentrantLock
-  val lockB = new JReentrantLock
-  val lockC = new JReentrantLock
-  
+  val lockA,lockB,lockC = new JReentrantLock
+
+//  test("compose two locks"){
+//    val answer: Int = lockA lockB { 42 }
+//    answer mustBe 42
+//  }
+//
+//  test("compose three locks"){
+//    val answer: Int = lockA lockB lockC { 42 }
+//    answer mustBe 42
+//  }
+
   test("lock two locks with and"){
     val answer: Int = (lockA and lockB) { 42 }
     answer mustBe 42
@@ -103,5 +113,4 @@ class MultiLockTest extends FunSuite with MustMatchers with MustBeSugar{
     val answer: Int = for( a <- lockA; b <- lockB; c <- lockC ) yield { 42 }
     answer mustBe 42
   }
-
 }
