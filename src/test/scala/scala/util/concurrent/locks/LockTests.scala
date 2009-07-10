@@ -1,6 +1,7 @@
 package scala.util.concurrent.locks
 
 import Implicits._
+import Duration._
 
 /**
  * Created by IntelliJ IDEA.
@@ -51,3 +52,21 @@ class AttemptFunctionShouldntBeEvaluatedOnFailureTest extends LockTest {
   }
 }
 
+
+/**
+ * Simply demonstrate using the Duration methods on Int
+ */
+class UseIntDurationApi extends LockTest{
+
+  thread("lock holder"){
+    lock.attemptFor(5.nanos)   { /*nothing*/ } getOrElse { explode }
+    lock.attemptFor(5.micros)  { /*nothing*/ } getOrElse { explode }
+    lock.attemptFor(5.millis)  { /*nothing*/ } getOrElse { explode }
+    lock.attemptFor(5.seconds) { /*nothing*/ } getOrElse { explode }
+    lock.attemptFor(5.minutes) { /*nothing*/ } getOrElse { explode }
+    lock.attemptFor(5.hours)   { /*nothing*/ } getOrElse { explode }
+    lock.attemptFor(5.days)    { /*nothing*/ } getOrElse { explode }
+  }
+
+  def explode = fail("should have gotten lock!")
+}
