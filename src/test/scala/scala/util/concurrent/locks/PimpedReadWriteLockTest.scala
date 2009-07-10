@@ -27,7 +27,7 @@ class PimpedReadWriteLockTest extends ConcurrentTest {
 
   //logLevel = everything
 
-  5.threads("reader thread("+_+")") {
+  5.threads("reader thread") {
     lock.read {
       logger.debug.around("using read lock") {waitForTick(2)}
     }

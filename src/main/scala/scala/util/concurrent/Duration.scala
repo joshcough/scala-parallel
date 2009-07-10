@@ -1,13 +1,11 @@
 package scala.util.concurrent
 
-import java.util.concurrent.TimeUnit
-
 sealed abstract class Duration {
   def toJavaNanos: Long
 }
 
 object Duration {
-  import Math.{MAX_LONG, MIN_LONG}
+  import Math.{MAX_LONG}
   import DurationHelpers._
   
   case class Nanoseconds(length: Long) extends Duration {

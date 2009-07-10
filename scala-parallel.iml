@@ -17,7 +17,16 @@
     <orderEntry type="module-library">
       <library>
         <CLASSES>
-          <root url="jar://$MODULE_DIR$/lib/scalatest-0.9.5.jar!/" />
+          <root url="jar://$MODULE_DIR$/lib/jsr166y.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library">
+      <library>
+        <CLASSES>
+          <root url="jar://$MODULE_DIR$/lib/extra166y.jar!/" />
         </CLASSES>
         <JAVADOC />
         <SOURCES />

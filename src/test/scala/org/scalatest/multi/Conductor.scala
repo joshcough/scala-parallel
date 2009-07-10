@@ -6,7 +6,9 @@ import scala.util.concurrent.PimpedThreadGroup._
 import scala.collection.jcl.Conversions.convertList
 
 /**
- *
+ * @author Josh Cough
+ * Date: Jun 14, 2009
+ * Time: 12:00 PM
  */
 trait Conductor extends PrintlnLogger {
   logLevel = nothing
@@ -29,7 +31,7 @@ trait Conductor extends PrintlnLogger {
   /////////////////////// thread management start //////////////////////////////
 
   // place all threads in a new thread group
-  protected val threadGroup = new ThreadGroup("MTC-Threads")
+  protected val threadGroup = new ThreadGroup("Orchestra")
 
   // all the threads in this test
   // TODO: Potential problem with should only be accessed by main thread, but not enforcing. Should
@@ -54,13 +56,13 @@ trait Conductor extends PrintlnLogger {
     t
   }
 
-  implicit def addThreadsMethodToInt(i:Int) = new {
-    def threads[T](name: Int => String)(f: => T): List[Thread] = {
-      val seq = for( count <- 1 to i) yield thread(name(i)) {f}
+  implicit def addThreadsMethodToInt(nrThreads:Int) = new {
+    def threads[T](name: String)(f: => T): List[Thread] = {
+      val seq = for( i <- 1 to nrThreads) yield thread(name + "("+i+")") {f}
       seq.toList
     }
     def anonymousThreads[T](f: => T): List[Thread] = {
-      val seq = for( count <- 1 to i) yield anonymous_thread{f}
+      val seq = for( i <- 1 to nrThreads) yield anonymous_thread{f}
       seq.toList
     }
   }
@@ -201,6 +203,7 @@ trait Conductor extends PrintlnLogger {
     // start each test thread
     threads.foreach(startThread)
 
+    // release the latch, allowing all threads to start
     // wait for all the test threads to start before starting the clock
     threadStartLatch.countDown()
 
@@ -208,17 +211,16 @@ trait Conductor extends PrintlnLogger {
     val clockThread = startThread(ClockThread(clockPeriod, runLimit))
 
     // wait until all threads have ended
-    threads foreach waitForThread
-    waitForThread(clockThread)
+    waitForThreads
 
     // if there are any errors, get out and dont run the finish function
     if (!errors.isEmpty) {
       logger.error("errors: " + errors)      
       throw errors.peek
+    } else{
+      // invoke finish at the end of each run
+      runFinishFunction()
     }
-
-    // invoke finish at the end of each run
-    runFinishFunction()
   }
 
   private def startThread(t: Thread): Thread = {
@@ -242,6 +244,13 @@ trait Conductor extends PrintlnLogger {
   // returns, and after that the error gets into the errors. Because if you look in run() in the
   // thread inside createTestThread, the signalling error happens in a catch Throwable block before the thread
   // returns.
+  def waitForThreads{
+    while(threadGroup.anyThreadsAlive_?){
+      threadGroup.getThreads foreach waitForThread
+    }
+  }
+
+
   def waitForThread(t: Thread) {
     logger.trace("waiting for: " + t.getName + " which is in state:" + t.getState)
     try {

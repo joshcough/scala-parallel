@@ -123,7 +123,7 @@
       <module fileurl="file://$PROJECT_DIR$/scala-parallel.iml" filepath="$PROJECT_DIR$/scala-parallel.iml" />
     </modules>
   </component>
-  <component name="ProjectRootManager" version="2" languageLevel="JDK_1_5" assert-keyword="true" jdk-15="true" project-jdk-name="1.5" project-jdk-type="JavaSDK">
+  <component name="ProjectRootManager" version="2" languageLevel="JDK_1_5" assert-keyword="true" jdk-15="true" project-jdk-name="1.6" project-jdk-type="JavaSDK">
     <output url="file://$PROJECT_DIR$/out" />
   </component>
   <component name="RmicSettings">
@@ -143,11 +143,11 @@
   <component name="libraryTable">
     <library name="scala-2.7.5">
       <CLASSES>
-        <root url="jar://$PROJECT_DIR$/project/boot/scala-2.7.5/lib/scala-compiler.jar!/" />
-        <root url="jar://$PROJECT_DIR$/project/boot/scala-2.7.5/lib/scala-library.jar!/" />
+        <root url="file://$PROJECT_DIR$/project/boot/scala-2.7.5/lib" />
       </CLASSES>
       <JAVADOC />
       <SOURCES />
+      <jarDirectory url="file://$PROJECT_DIR$/project/boot/scala-2.7.5/lib" recursive="false" />
     </library>
   </component>
 </project>
