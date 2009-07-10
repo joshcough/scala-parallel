@@ -64,13 +64,13 @@ class UseIntDurationApi extends FunSuite with MustMatchers with MustBeSugar{
   test("demo"){
     val lock = new JReentrantLock
     
-    lock.attemptFor(5.nanos) { /*nothing*/ } getOrElse {explode}
-    lock.attemptFor(5.micros) { /*nothing*/ } getOrElse {explode}
-    lock.attemptFor(5.millis) { /*nothing*/ } getOrElse {explode}
+    lock.attemptFor(5.nanos)   { /*nothing*/ } getOrElse {explode}
+    lock.attemptFor(5.micros)  { /*nothing*/ } getOrElse {explode}
+    lock.attemptFor(5.millis)  { /*nothing*/ } getOrElse {explode}
     lock.attemptFor(5.seconds) { /*nothing*/ } getOrElse {explode}
     lock.attemptFor(5.minutes) { /*nothing*/ } getOrElse {explode}
-    lock.attemptFor(5.hours) { /*nothing*/ } getOrElse {explode}
-    lock.attemptFor(5.days) { /*nothing*/ } getOrElse {explode}
+    lock.attemptFor(5.hours)   { /*nothing*/ } getOrElse {explode}
+    lock.attemptFor(5.days)    { /*nothing*/ } getOrElse {explode}
   }
 
   def explode = fail("should have gotten lock!")
