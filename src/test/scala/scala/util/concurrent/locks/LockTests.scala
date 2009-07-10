@@ -2,7 +2,8 @@ package scala.util.concurrent.locks
 
 import Implicits._
 import Duration._
-
+import org.scalatest.FunSuite
+import org.scalatest.matchers.{MustMatchers, MustBeSugar}
 /**
  * Created by IntelliJ IDEA.
  * User: joshcough
@@ -69,4 +70,25 @@ class UseIntDurationApi extends LockTest{
   }
 
   def explode = fail("should have gotten lock!")
+}
+
+
+/**
+ * 
+ */
+class MultiLockTest extends FunSuite with MustMatchers with MustBeSugar{
+
+  val lockA = new java.util.concurrent.locks.ReentrantLock
+  val lockB = new java.util.concurrent.locks.ReentrantLock
+    
+  test("lock two locks with and"){
+    val answer: Int = (lockA and lockB) { 42 }
+    answer mustBe 42
+  }
+
+
+  test("lock two with for?"){
+    val answer: Int = for( a <- lockA; b <- lockB ) yield 42
+    answer mustBe 42
+  }
 }
