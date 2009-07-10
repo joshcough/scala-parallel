@@ -11,27 +11,39 @@ object Duration {
   case class Nanoseconds(length: Long) extends Duration {
     def toJavaNanos = length
   }
-  case class Microseconds(length: Long) {
+  case class Microseconds(length: Long) extends Duration {
     def toJavaNanos = x(length, C1/C0, MAX_LONG/(C1/C0))
   }
-  case class Milliseconds(length: Long) {
+  case class Milliseconds(length: Long) extends Duration {
     def toJavaNanos = x(length, C2/C0, MAX_LONG/(C2/C0))
   }
-  case class Seconds(length: Long) {
+  case class Seconds(length: Long) extends Duration {
     def toJavaNanos = x(length, C3/C0, MAX_LONG/(C3/C0))
   }
-  case class Minutes(length: Long) {
+  case class Minutes(length: Long) extends Duration {
     def toJavaNanos = x(length, C4/C0, MAX_LONG/(C4/C0))
   }
-  case class Hours(length: Long) {
+  case class Hours(length: Long) extends Duration {
     def toJavaNanos = x(length, C5/C0, MAX_LONG/(C5/C0))
   }
-  case class Days(length: Long) {
+  case class Days(length: Long) extends Duration {
     def toJavaNanos = x(length, C6/C0, MAX_LONG/(C6/C0))
+  }
+
+  implicit def intWithDurationMethods(i: Int) = new {
+    def nanos   = Nanoseconds(i)
+    def micros  = Microseconds(i)
+    def millis  = Milliseconds(i)
+    def seconds = Seconds(i)
+    def minutes = Minutes(i)
+    def hours   = Hours(i)
+    def days    = Days(i)
   }
 }
 
+
 object DurationHelpers {
+
   import Math.{MAX_LONG, MIN_LONG}
 
   // Handy constants for conversion methods
