@@ -4,6 +4,8 @@ import Implicits._
 import Duration._
 import org.scalatest.FunSuite
 import org.scalatest.matchers.{MustMatchers, MustBeSugar}
+import java.util.concurrent.locks.{ReentrantLock=>JReentrantLock}
+
 /**
  * Created by IntelliJ IDEA.
  * User: joshcough
@@ -13,7 +15,7 @@ import org.scalatest.matchers.{MustMatchers, MustBeSugar}
  */
 
 class LockTest extends ConcurrentTest{
-  val lock = new java.util.concurrent.locks.ReentrantLock  
+  val lock = new JReentrantLock
 }
 
 /**
@@ -78,8 +80,8 @@ class UseIntDurationApi extends LockTest{
  */
 class MultiLockTest extends FunSuite with MustMatchers with MustBeSugar{
 
-  val lockA = new java.util.concurrent.locks.ReentrantLock
-  val lockB = new java.util.concurrent.locks.ReentrantLock
+  val lockA = new JReentrantLock
+  val lockB = new JReentrantLock
     
   test("lock two locks with and"){
     val answer: Int = (lockA and lockB) { 42 }
