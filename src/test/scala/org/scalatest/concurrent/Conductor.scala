@@ -1,4 +1,4 @@
-package org.scalatest.multi
+package org.scalatest.concurrent
 
 import java.util.concurrent._
 import Thread.State._
@@ -10,8 +10,9 @@ import scala.collection.jcl.Conversions.convertList
  * Date: Jun 14, 2009
  * Time: 12:00 PM
  */
-trait Conductor extends PrintlnLogger {
-  logLevel = nothing
+class Conductor(logger:Logger){
+
+  import logger._
 
   type Tick = Int
 
@@ -26,7 +27,7 @@ trait Conductor extends PrintlnLogger {
    * a BlockingQueue containing the first Error/Exception that occured
    * in thread methods or that are thrown by the clock thread
    */
-  protected val errors = new ArrayBlockingQueue[Throwable](20)
+  val errors = new ArrayBlockingQueue[Throwable](20)
 
   /////////////////////// thread management start //////////////////////////////
 
@@ -45,7 +46,7 @@ trait Conductor extends PrintlnLogger {
   /**
    *
    */
-  def anonymous_thread[T](f: => T): Thread = thread("thread" + threads.size) {f}
+  def thread[T](f: => T): Thread = thread("thread" + threads.size) {f}
 
   /**
    *
@@ -56,13 +57,15 @@ trait Conductor extends PrintlnLogger {
     t
   }
 
-  implicit def addThreadsMethodToInt(nrThreads:Int) = new {
+  implicit def addThreadsMethodToInt(nrThreads:Int) = new ThreadedInt(nrThreads)
+
+  class ThreadedInt(nrThreads:Int) {
     def threads[T](name: String)(f: => T): List[Thread] = {
       val seq = for( i <- 1 to nrThreads) yield thread(name + "("+i+")") {f}
       seq.toList
     }
-    def anonymousThreads[T](f: => T): List[Thread] = {
-      val seq = for( i <- 1 to nrThreads) yield anonymous_thread{f}
+    def threads[T](f: => T): List[Thread] = {
+      val seq = for( i <- 1 to nrThreads) yield thread{f}
       seq.toList
     }
   }
@@ -74,7 +77,8 @@ trait Conductor extends PrintlnLogger {
     new Thread(threadGroup, new Runnable() {
       def run() {
         try {
-          threadStartLatch.await // Wait for the test framework to say its ok to go.
+          mainThreadStartLatch.countDown // notify the main thread that we are indeed ready to go.
+          testThreadStartLatch.await // Wait for the test framework to say its ok to go.
           f()
         } catch {
           // The reason this is a catch Throwable is because you want to let ThreadDeath through
@@ -177,18 +181,25 @@ trait Conductor extends PrintlnLogger {
   //////////////////////////////// run methods start ////////////////////////////////////////
 
   /**
-   *
+   * Keeps the main thread from allowing the test threads to execute their bodies
+   * until all of them are started, and ready to go.
    */
-  private val threadStartLatch = new CountDownLatch(1)
+  private lazy val mainThreadStartLatch = new CountDownLatch(threads.size)
+
+  /**
+   * Keeps the test threads from executing their bodies until the main thread
+   * allows them to.
+   */
+  private val testThreadStartLatch = new CountDownLatch(1)
 
   /**
    * Run multithreaded test with the default parameters,
    * or the parameters set at the command line.
    */
-  def start() {
+  def execute() {
     val DEFAULT_CLOCKPERIOD = 10
     val DEFAULT_RUNLIMIT = 5
-    start(DEFAULT_CLOCKPERIOD, DEFAULT_RUNLIMIT)
+    execute(DEFAULT_CLOCKPERIOD, DEFAULT_RUNLIMIT)
   }
 
   /**
@@ -198,14 +209,14 @@ trait Conductor extends PrintlnLogger {
    * @throws Throwable The first error or exception that is thrown by one of the threads
    */
   // TODO: Only allow this to be called once per instance.
-  def start(clockPeriod: Int, runLimit: Int) {
+  def execute(clockPeriod: Int, runLimit: Int) {
 
     // start each test thread
     threads.foreach(startThread)
 
     // release the latch, allowing all threads to start
     // wait for all the test threads to start before starting the clock
-    threadStartLatch.countDown()
+    testThreadStartLatch.countDown()
 
     // start the clock thread
     val clockThread = startThread(ClockThread(clockPeriod, runLimit))

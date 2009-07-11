@@ -1,4 +1,4 @@
-package org.scalatest.multi
+package org.scalatest.concurrent
 
 /**
  * @author Josh Cough
