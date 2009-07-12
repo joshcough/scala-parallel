@@ -12,8 +12,6 @@ import scala.collection.jcl.Conversions.convertList
  */
 class Conductor(logger:Logger){
 
-  import logger._
-
   type Tick = Int
 
   /**
@@ -212,7 +210,7 @@ class Conductor(logger:Logger){
   def execute(clockPeriod: Int, runLimit: Int) {
 
     // start each test thread
-    threads.foreach(startThread)
+    threads foreach startThread
 
     // release the latch, allowing all threads to start
     // wait for all the test threads to start before starting the clock
@@ -225,13 +223,7 @@ class Conductor(logger:Logger){
     waitForThreads
 
     // if there are any errors, get out and dont run the finish function
-    if (!errors.isEmpty) {
-      logger.error("errors: " + errors)      
-      throw errors.peek
-    } else{
-      // invoke finish at the end of each run
-      runFinishFunction()
-    }
+    if (errors.isEmpty) { runFinishFunction() } 
   }
 
   private def startThread(t: Thread): Thread = {

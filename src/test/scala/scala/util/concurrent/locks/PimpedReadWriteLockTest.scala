@@ -25,8 +25,6 @@ class PimpedReadWriteLockTest extends ConcurrentTest {
   val lock = new java.util.concurrent.locks.ReentrantReadWriteLock
   import Implicits.RichReentrantReadWriteLock
 
-  logLevel = everything
-
   test("demonstrate my pimpness") {
     5.threads("reader thread") {
       lock.read {
