@@ -18,23 +18,35 @@ case class ParallelArray[A](data: Array[A]){
    *
    */
   def map[B](f: A => B): ParallelArray[B] = {
-    class MapWorker(s: Int, e: Int) extends SideEffectWorker[Array[B]](new Array[B](data.size), s, e) {
+    class MapWorker(newData: Array[B], s: Int, e: Int) extends SideEffectWorker[Array[B]](newData, s, e) {
       def executeSideEffect = for (i <- start to end) newData(i) = f(data(i))
-      def apply(start: Int, end: Int) = new MapWorker(start, end)
+      def split(start: Int, end: Int) = new MapWorker(newData, start, end)
     }
-    ParallelArray(run(new MapWorker(0, data.length-1)))
+    ParallelArray(run(new MapWorker(new Array[B](data.size), 0, data.length-1)))
   }
 
   /**
    *
    */
   def filter(p: A => Boolean): ParallelArray[A] = {
-    class FilterWorker(s: Int, e: Int) extends SideEffectWorker[Array[A]](new Array[A](data.size), s, e) {
-      def executeSideEffect = for (i <- start to end; if (p(data(i)))) newData(i) = data(i)
-      def apply(start: Int, end: Int) = new FilterWorker(start, end)
-      override def getResult: Array[A] = newData.filter(_ != null)      
-    }
-    ParallelArray(run(new FilterWorker(0, data.length - 1)))
+    ParallelArray(run(new FilterWorker(p, new Array[A](data.size), 0, data.length - 1)))
+  }
+
+  /**
+   *
+   */
+  def remove(p : A => Boolean) : ParallelArray[A] ={
+    ParallelArray(run(new FilterWorker(a => ! p(a), new Array[A](data.size), 0, data.length - 1)))
+  }
+
+  /**
+   *
+   */
+  private class FilterWorker(p : A => Boolean, newData: Array[A], s: Int, e: Int)
+          extends SideEffectWorker[Array[A]](new Array[A](data.size), s, e) {
+    def executeSideEffect = for (i <- start to end; if (p(data(i)))) newData(i) = data(i)
+    def split(start: Int, end: Int) = new FilterWorker(p, newData, start, end)
+    override def getResult: Array[A] = newData.filter(_ != null)
   }
 
   /**
@@ -52,7 +64,7 @@ case class ParallelArray[A](data: Array[A]){
         case Some(i) => Some(data(i))
         case None => None
       }
-      def apply(start: Int, end: Int) = new FindWorker(start,end)
+      def split(start: Int, end: Int) = new FindWorker(start,end)
     }
     run(new FindWorker(0, data.length - 1))
   }
@@ -64,13 +76,24 @@ case class ParallelArray[A](data: Array[A]){
     class CountWorker(s: Int, e: Int) extends Worker[Int](s,e) {
       def reduce(x: Int, y: Int) = x + y
       def executeSequentially = (for (i <- start to end; if (p(data(i)))) yield data(i)).size
-      def apply(start: Int, end: Int) = new CountWorker(start,end)
+      def split(start: Int, end: Int) = new CountWorker(start,end)
     }
     run(new CountWorker(0, data.length - 1))
   }
 
-  def exists (p : (A) => Boolean) : Boolean = count(p) > 0
+  /**
+   *
+   */
+  def exists(p : (A) => Boolean) : Boolean = count(p) > 0
 
+  /**
+   * 
+   */
+  def forall(p : (A) => Boolean) : Boolean = count(p) == data.size
+
+  /**
+   * 
+   */
   private def run[T](worker:Worker[T]): T = {
     ParallelArray.fjPool.invoke(worker)
     worker.getResult
@@ -82,15 +105,15 @@ case class ParallelArray[A](data: Array[A]){
   private abstract class Worker[T](val start: Int, val end: Int) extends RecursiveAction {
 
     def executeSequentially: T
-    def apply(start: Int, end: Int): Worker[T]
+    def split(start: Int, end: Int): Worker[T]
     def reduce(t1:T,t2:T): T
 
     def getResult = result.get
     protected var result: Option[T] = None
 
     def executeInParallel: T = {
-      val left = this(start, start+midpoint)
-      val right = this(start+midpoint+1, end)
+      val left = split(start, start+midpoint)
+      val right = split(start+midpoint+1, end)
       ForkJoinTask.invokeAll(left, right)
       reduce( left.result.get, right.result.get )
     }
