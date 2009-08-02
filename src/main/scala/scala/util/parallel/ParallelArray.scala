@@ -18,35 +18,27 @@ case class ParallelArray[A](data: Array[A]){
    *
    */
   def map[B](f: A => B): ParallelArray[B] = {
-    class MapWorker(newData: Array[B], s: Int, e: Int) extends SideEffectWorker[Array[B]](newData, s, e) {
-      def executeSideEffect = for (i <- start to end) newData(i) = f(data(i))
-      def split(start: Int, end: Int) = new MapWorker(newData, start, end)
-    }
-    ParallelArray(run(new MapWorker(new Array[B](data.size), 0, data.length-1)))
+    ParallelArray(run(new MapWorker(f, x => true, new Array[B](data.size), 0, data.length-1)))
   }
 
   /**
    *
    */
   def filter(p: A => Boolean): ParallelArray[A] = {
-    ParallelArray(run(new FilterWorker(p, new Array[A](data.size), 0, data.length - 1)))
+    ParallelArray(run(new MapWorker(x => x, p, new Array[A](data.size), 0, data.length-1)).filter(_ != null))
   }
 
   /**
    *
    */
   def remove(p : A => Boolean) : ParallelArray[A] ={
-    ParallelArray(run(new FilterWorker(a => ! p(a), new Array[A](data.size), 0, data.length - 1)))
+    ParallelArray(run(new MapWorker(x => x, ! p(_), new Array[A](data.size), 0, data.length - 1)).filter(_ != null))
   }
 
-  /**
-   *
-   */
-  private class FilterWorker(p : A => Boolean, newData: Array[A], s: Int, e: Int)
-          extends SideEffectWorker[Array[A]](new Array[A](data.size), s, e) {
-    def executeSideEffect = for (i <- start to end; if (p(data(i)))) newData(i) = data(i)
-    def split(start: Int, end: Int) = new FilterWorker(p, newData, start, end)
-    override def getResult: Array[A] = newData.filter(_ != null)
+  private class MapWorker[B](f: A => B, p: A => Boolean, newData: Array[B], s: Int, e: Int)
+          extends SideEffectWorker[Array[B]](newData, s, e) {
+    def executeSideEffect = for (i <- start to end; if(p(data(i)))) newData(i) = f(data(i))
+    def split(start: Int, end: Int) = new MapWorker(f, p, newData, start, end)
   }
 
   /**
