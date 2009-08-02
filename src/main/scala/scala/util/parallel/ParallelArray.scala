@@ -2,58 +2,113 @@ package scala.util.parallel
 
 import _root_.jsr166y.{RecursiveAction, ForkJoinPool, ForkJoinTask}
 
-object ParallelArray{
-  val fjPool = new ForkJoinPool
-  val seq_threshold = 2
-}
+/**
+ * 
+ */
+object ParallelArray{ val fjPool = new ForkJoinPool }
 
+/**
+ * 
+ */
 case class ParallelArray[A](data: Array[A]){
 
+  val seq_threshold = 2  
+
+  /**
+   *
+   */
   def map[B](f: A => B): ParallelArray[B] = {
-    run(MapWorker(f, new Array[B](data.size), 0, data.length-1))
+    class MapWorker(s: Int, e: Int) extends SideEffectWorker[Array[B]](new Array[B](data.size), s, e) {
+      def executeSideEffect = for (i <- start to end) newData(i) = f(data(i))
+      def apply(start: Int, end: Int) = new MapWorker(start, end)
+    }
+    ParallelArray(run(new MapWorker(0, data.length-1)))
   }
 
-  def filter(f: A => Boolean): ParallelArray[A] = {
-    run(FilterWorker(f, new Array[A](data.size), 0, data.length-1))
+  /**
+   *
+   */
+  def filter(p: A => Boolean): ParallelArray[A] = {
+    class FilterWorker(s: Int, e: Int) extends SideEffectWorker[Array[A]](new Array[A](data.size), s, e) {
+      def executeSideEffect = for (i <- start to end; if (p(data(i)))) newData(i) = data(i)
+      def apply(start: Int, end: Int) = new FilterWorker(start, end)
+      override def getResult: Array[A] = newData.filter(_ != null)      
+    }
+    ParallelArray(run(new FilterWorker(0, data.length - 1)))
   }
 
-  private def run[R,S](worker:Worker[R,S]): ParallelArray[S] = {
+  /**
+   * 
+   */
+  def find (p : A => Boolean) : Option[A] = {
+    class FindWorker(s: Int, e: Int) extends Worker[Option[A]](s,e) {
+      def reduce(left:Option[A],right:Option[A]): Option[A] = {
+        left match{
+          case Some(_) => left
+          case None => right
+        }
+      }
+      def executeSequentially = (start to end).find{ i => p(data(i))} match {
+        case Some(i) => Some(data(i))
+        case None => None
+      }
+      def apply(start: Int, end: Int) = new FindWorker(start,end)
+    }
+    run(new FindWorker(0, data.length - 1))
+  }
+
+  /**
+   * 
+   */
+  def count(p: A => Boolean): Int = {
+    class CountWorker(s: Int, e: Int) extends Worker[Int](s,e) {
+      def reduce(x: Int, y: Int) = x + y
+      def executeSequentially = (for (i <- start to end; if (p(data(i)))) yield data(i)).size
+      def apply(start: Int, end: Int) = new CountWorker(start,end)
+    }
+    run(new CountWorker(0, data.length - 1))
+  }
+
+  def exists (p : (A) => Boolean) : Boolean = count(p) > 0
+
+  private def run[T](worker:Worker[T]): T = {
     ParallelArray.fjPool.invoke(worker)
-    ParallelArray(worker.getData)
+    worker.getResult
   }
 
-  abstract class Worker[R,S](f: A => R, newData: Array[S], start: Int, end: Int) extends RecursiveAction {
+  /**
+   * 
+   */
+  private abstract class Worker[T](val start: Int, val end: Int) extends RecursiveAction {
 
-    def executeSequentially: Unit
-    def getData: Array[S]
-    def apply(start: Int, end: Int): Worker[R,S]
+    def executeSequentially: T
+    def apply(start: Int, end: Int): Worker[T]
+    def reduce(t1:T,t2:T): T
+
+    def getResult = result.get
+    protected var result: Option[T] = None
+
+    def executeInParallel: T = {
+      val left = this(start, start+midpoint)
+      val right = this(start+midpoint+1, end)
+      ForkJoinTask.invokeAll(left, right)
+      reduce( left.result.get, right.result.get )
+    }
 
     private def size = end - start
     private def midpoint = size / 2
 
     override def compute {
-      if (size < ParallelArray.seq_threshold) {
-        println("thread: " + currentThread)
-        executeSequentially
-      }
-      else {
-        println("fork: (" +start + "," + (start+midpoint) + "),(" +(start+midpoint+1) + "," + end + ")")
-        ForkJoinTask.invokeAll(this(start, start+midpoint),this(start+midpoint+1, end))
-      }
+      result = Some(if (size < seq_threshold) executeSequentially else executeInParallel)
     }
   }
 
-  case class MapWorker[R](f: A => R, newData: Array[R], start: Int, end: Int)
-          extends Worker[R,R](f, newData, start, end) {
-    def executeSequentially = for(i <- start to end) newData(i) = f(data(i))
-    def getData: Array[R] = newData
-    def apply(start: Int, end: Int) = MapWorker(f,newData,start,end)
-  }
-
-  case class FilterWorker(f: A => Boolean, newData: Array[A], start: Int, end: Int)
-          extends Worker[Boolean, A](f, newData, start, end) {
-    def executeSequentially = for(i <- start to end) if(f(data(i))) newData(i) = data(i)
-    def getData: Array[A] = newData.filter(_ != null)
-    def apply(start: Int, end: Int) = FilterWorker(f,newData,start,end)
+  /**
+   * 
+   */
+  private abstract class SideEffectWorker[T](val newData: T, s: Int, e: Int) extends Worker[T](s, e) {
+    def reduce(t1:T,t2:T): T = t1
+    def executeSideEffect: Unit
+    def executeSequentially = { executeSideEffect; newData }
   }
 }
