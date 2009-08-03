@@ -2,84 +2,83 @@ package scala.util.parallel
 
 import _root_.jsr166y.{RecursiveAction, ForkJoinPool, ForkJoinTask}
 
-object ParallelArray{ val fjPool = new ForkJoinPool }
-
 case class ParallelArray[A](data: Array[A]){
 
-  val seq_threshold = 2  
+  val seq_threshold = 16
 
-  def map[B](f: A => B): ParallelArray[B] = {
-    ParallelArray(run(new MapWorker(f, x => true, new Array[B](data.size), 0, data.length-1)))
+  // the mastermind of this operation.
+  def mapreduce[B](id: B)(m: A => B, r: (B, B) => B): B = {
+    run(new FunctionalRecursiveAction(r, (s, e) => (s to e).foldLeft(id) {(b, i) => r(b, m(data(i)))}))
   }
 
-  def filter(p: A => Boolean): ParallelArray[A] = {
-    ParallelArray(run(new MapWorker(x => x, p, new Array[A](data.size), 0, data.length-1)).filter(_ != null))
+  // these all work off mapreduce
+  def find (p: A => Boolean): Option[A] = {
+    mapreduce[Option[A]](None)(
+      a => if(p(a)) Some(a) else None,
+      (l, r) => l match{ case Some(_) => l; case None => r } )
   }
+  def exists(p: A => Boolean): Boolean = find(p).isDefined
+  def forall(p: A => Boolean): Boolean = mapreduce(true)(p, _ && _ )
+  def reduce(id: A)(r: (A, A) => A): A = mapreduce(id)(a=>a, r)
+  def count(p: A => Boolean): Int = mapreduce[Int](0)(a => if(p(a)) 1 else 0, (l, r) => l + r )
 
-  def remove(p : A => Boolean) : ParallelArray[A] ={
-    ParallelArray(run(new MapWorker(x => x, ! p(_), new Array[A](data.size), 0, data.length - 1)).filter(_ != null))
-  }
+  // these three require a new array, and populate mutably.
+  // the do not work off mapreduce!
+  def map[B](f: A => B): ParallelArray[B] = MapWorker.map(f)
+  def filter(p: A => Boolean): ParallelArray[A] = MapWorker.filter(p)
+  def remove(p: A => Boolean): ParallelArray[A] = MapWorker.filter(!p(_))
 
-  def exists(p : (A) => Boolean) : Boolean = count(p) > 0
+  private class FunctionalRecursiveAction[T](reduce:(T,T)=>T, executeSequentially:(Int, Int)=>T,
+                          start: Int, end: Int) extends RecursiveAction {
 
-  def forall(p : (A) => Boolean) : Boolean = count(p) == data.size
+    def this(reduce:(T,T)=>T, seq:(Int, Int) => T) = this(reduce, seq, 0, data.length-1)
 
-  def count(p: A => Boolean): Int = {
-    class CountWorker(s: Int, e: Int) extends Worker[Int](s,e) {
-      def reduce(x: Int, y: Int) = x + y
-      def executeSequentially = (for (i <- start to end; if (p(data(i)))) yield data(i)).size
-      def apply(start: Int, end: Int) = new CountWorker(start,end)
+    lazy val result = Some(if (size < seq_threshold) innerExecuteSequentially else executeInParallel)
+    private def size = end - start
+    private def midpoint = size / 2
+
+    private def innerExecuteSequentially = {
+      //println(currentThread)
+      executeSequentially(start, end)
     }
-    run(new CountWorker(0, data.length - 1))
-  }
 
-  def find (p : A => Boolean) : Option[A] = {
-    class FindWorker(s: Int, e: Int) extends Worker[Option[A]](s,e) {
-      def reduce(left:Option[A],right:Option[A]): Option[A] = {
-        left match{ case Some(_) => left; case None => right }
-      }
-      def executeSequentially = (start to end).find{ i => p(data(i)) } match {
-        case Some(i) => Some(data(i))
-        case None => None
-      }
-      def apply(start: Int, end: Int) = new FindWorker(start,end)
-    }
-    run(new FindWorker(0, data.length - 1))
-  }
-
-  private def run[T](worker:Worker[T]): T = {
-    ParallelArray.fjPool.invoke(worker)
-    worker.getResult
-  }
-
-  private abstract class Worker[T](val start: Int, val end: Int) extends RecursiveAction {
-
-    def executeSequentially: T
-    def apply(start: Int, end: Int): Worker[T]
-    def reduce(t1:T,t2:T): T
-
-    def getResult = result.get
-    protected var result: Option[T] = None
-
-    def executeInParallel: T = {
-      val left = apply(start, start+midpoint)
-      val right = apply(start+midpoint+1, end)
+    private def executeInParallel: T = {
+      val left = new FunctionalRecursiveAction(reduce, executeSequentially, start, start+midpoint)
+      val right = new FunctionalRecursiveAction(reduce, executeSequentially, start+midpoint+1, end)
       ForkJoinTask.invokeAll(left, right)
       reduce( left.result.get, right.result.get )
     }
 
-    private def size = end - start
-    private def midpoint = size / 2
-
-    override def compute {
-      result = Some(if (size < seq_threshold) executeSequentially else executeInParallel)
-    }
+    override def compute { result }
   }
 
-  private class MapWorker[B](f: A => B, p: A => Boolean, newData: Array[B], s: Int, e: Int)
-          extends Worker[Array[B]](s, e) {
-    def reduce(left:Array[B],right:Array[B]): Array[B] = left
-    def executeSequentially = { for (i <- start to end; if(p(data(i)))) newData(i) = f(data(i)); newData }
-    def apply(start: Int, end: Int) = new MapWorker(f, p, newData, start, end)
+  private object MapWorker{
+    def sequentially[T](newData:Array[T], f: A => T, p : A => Boolean)(start:Int, end:Int) = {
+      for (i <- start to end; if(p(data(i)))) newData(i) = f(data(i)); newData
+    }
+    def newMapper[B](f: A => B) = {
+      new FunctionalRecursiveAction[Array[B]]((l,r)=>l, sequentially[B](new Array[B](data.size), f, t => true))
+    }
+    def newFilterer(p: A => Boolean) = {
+      new FunctionalRecursiveAction[Array[A]]((l,r)=>l, sequentially[A](new Array[A](data.size), t => t, p))
+    }
+
+    def map[B](f: A => B) = ParallelArray(run(MapWorker.newMapper(f)))
+    def filter(p: A => Boolean) = ParallelArray(run(newFilterer(p)).filter(_!=null))
+  }
+
+  private def run[T](worker:FunctionalRecursiveAction[T]): T = {
+    ParallelArray.fjPool.invoke(worker)
+    worker.result.get
+  }
+}
+
+object ParallelArray{
+  val fjPool = new ForkJoinPool
+  def time[T]( f: => T ) = {
+    val start = System.currentTimeMillis
+    val t = f
+    println("time: " + (System.currentTimeMillis - start))
+    t
   }
 }
